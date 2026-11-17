@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Attendee\TicketController as AttendeeTicketController;
 use App\Http\Controllers\Organizer\CheckInController as OrganizerCheckInController;
+use App\Http\Controllers\Organizer\DashboardController as OrganizerDashboardController;
 use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\PublicEventController;
 use App\Http\Controllers\RegistrationController;
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware(['role:organizer'])->prefix('organizer')->name('organizer.')->group(function () {
+        Route::get('/dashboard', OrganizerDashboardController::class)->name('dashboard');
         Route::get('/events', [OrganizerEventController::class, 'index'])->name('events.index');
         Route::get('/events/create', [OrganizerEventController::class, 'create'])->name('events.create');
         Route::post('/events', [OrganizerEventController::class, 'store'])->name('events.store');

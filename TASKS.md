@@ -67,15 +67,15 @@
 
 ---
 
-## Phase 7: Organizer Analytics Dashboard [IN PROGRESS]
-- [ ] Analytics aggregation service (registrations, check-in rate, capacity utilization, timeline velocity)
-- [ ] Organizer Dashboard Page (`pages/organizer/dashboard.tsx`) with metric cards and visual trends
-- [ ] Real-time attendee roster table with search and check-in status badge
-- [ ] Feature tests for dashboard data integrity
+## Phase 7: Organizer Analytics Dashboard [COMPLETED]
+- [x] Analytics aggregation service & controller (`Organizer\DashboardController`)
+- [x] Organizer Dashboard Page (`pages/organizer/dashboard.tsx`) with KPI cards & 7-day velocity chart
+- [x] Real-time attendee roster table and individual event turnout rates
+- [x] Feature tests for dashboard data integrity (`tests/Feature/OrganizerAnalyticsTest.php`)
 
 ---
 
-## Phase 8: AI Event Assistant (Laravel AI SDK / Grounded Retrieval)
+## Phase 8: AI Event Assistant [IN PROGRESS]
 - [ ] Event Knowledge Retrieval service (grounded strictly on event details, agenda, venue, FAQs)
 - [ ] AI Assistant Controller & rate-limited endpoint
 - [ ] Event AI Chatbot Drawer/Widget on event detail pages (`components/ai-event-assistant.tsx`)
