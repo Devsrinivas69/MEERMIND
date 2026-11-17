@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Registration;
 use App\Models\Ticket;
+use App\Notifications\TicketIssuedNotification;
 use App\Services\QrCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,6 +96,13 @@ class RegistrationController extends Controller
 
             // Increment event counter
             $event->increment('registered_count');
+
+            // Dispatch ticket confirmation email notification
+            try {
+                $user->notify(new TicketIssuedNotification($ticket));
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return redirect()->route('attendee.tickets.show', $ticket->ticket_code)
                 ->with('success', 'Registration confirmed! Here is your digital QR ticket.');

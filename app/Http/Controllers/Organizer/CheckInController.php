@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CheckIn;
 use App\Models\Event;
 use App\Models\Ticket;
+use App\Notifications\CheckInConfirmedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -142,6 +143,13 @@ class CheckInController extends Controller
         });
 
         $attendee = $ticket->registration->user;
+
+        // Dispatch Check-In confirmation notification to attendee
+        try {
+            $attendee->notify(new CheckInConfirmedNotification($ticket, $checkIn));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'success' => true,
