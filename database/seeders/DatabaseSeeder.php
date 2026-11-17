@@ -23,12 +23,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Seed Core Users
-        $admin = User::firstOrCreate(
+        // 1. Seed Core Users (Default Password for demo accounts: 'password')
+        $defaultPassword = Hash::make('password');
+
+        $admin = User::updateOrCreate(
             ['email' => 'admin@meetmind.ai'],
             [
                 'name' => 'MeetMind Admin',
-                'password' => Hash::make('Password@123'),
+                'password' => $defaultPassword,
                 'role' => User::ROLE_ADMIN,
                 'email_verified_at' => now(),
                 'company' => 'MeetMind AI Global',
@@ -37,11 +39,24 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $organizer1 = User::firstOrCreate(
+        $organizer1 = User::updateOrCreate(
+            ['email' => 'sarah@meetmind.ai'],
+            [
+                'name' => 'Sarah Lin',
+                'password' => $defaultPassword,
+                'role' => User::ROLE_ORGANIZER,
+                'email_verified_at' => now(),
+                'company' => 'MeetMind AI Labs',
+                'job_title' => 'Director of Events & Ecosystem',
+                'bio' => 'Organizing high-impact technical conferences for AI innovators.',
+            ]
+        );
+
+        $organizerAlias = User::updateOrCreate(
             ['email' => 'sarah@frontier.ai'],
             [
-                'name' => 'Sarah Chen',
-                'password' => Hash::make('Password@123'),
+                'name' => 'Sarah Lin',
+                'password' => $defaultPassword,
                 'role' => User::ROLE_ORGANIZER,
                 'email_verified_at' => now(),
                 'company' => 'Frontier Intelligence Lab',
@@ -50,11 +65,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $organizer2 = User::firstOrCreate(
+        $organizer2 = User::updateOrCreate(
             ['email' => 'marcus@cloudfoundry.dev'],
             [
                 'name' => 'Marcus Vance',
-                'password' => Hash::make('Password@123'),
+                'password' => $defaultPassword,
                 'role' => User::ROLE_ORGANIZER,
                 'email_verified_at' => now(),
                 'company' => 'CloudFoundry Collective',
@@ -63,11 +78,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $attendee1 = User::firstOrCreate(
+        $attendee1 = User::updateOrCreate(
             ['email' => 'alex@example.com'],
             [
                 'name' => 'Alex Rivera',
-                'password' => Hash::make('Password@123'),
+                'password' => $defaultPassword,
                 'role' => User::ROLE_ATTENDEE,
                 'email_verified_at' => now(),
                 'company' => 'Pulse Tech',
@@ -76,11 +91,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $attendee2 = User::firstOrCreate(
+        $attendee2 = User::updateOrCreate(
             ['email' => 'priya@example.com'],
             [
                 'name' => 'Priya Patel',
-                'password' => Hash::make('Password@123'),
+                'password' => $defaultPassword,
                 'role' => User::ROLE_ATTENDEE,
                 'email_verified_at' => now(),
                 'company' => 'Apex Cloud Labs',
@@ -89,11 +104,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $attendee3 = User::firstOrCreate(
+        $attendee3 = User::updateOrCreate(
             ['email' => 'david@example.com'],
             [
                 'name' => 'David Kim',
-                'password' => Hash::make('Password@123'),
+                'password' => $defaultPassword,
                 'role' => User::ROLE_ATTENDEE,
                 'email_verified_at' => now(),
                 'company' => 'Studio Kinetic',

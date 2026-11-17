@@ -70,6 +70,20 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ---
 
+## Demo Accounts
+
+All demonstration accounts are seeded with password: `password`
+
+| Role | Email | Password | Primary Capabilities to Test |
+| :--- | :--- | :--- | :--- |
+| **Organizer (Host)** | `sarah@meetmind.ai` | `password` | Organizer Dashboard, Create/Edit Events, QR Scanner Terminal, AI Feedback Report |
+| **Attendee** | `alex@example.com` | `password` | Event Registration, Digital QR Ticket, Verified Review Submission |
+| **Super Admin** | `admin@meetmind.ai` | `password` | Platform Oversight & Global Administration |
+
+Refer to [DEMO_SCRIPT.md](file:///c:/Users/srinivas/OneDrive/Desktop/MEETMIND/DEMO_SCRIPT.md) for a complete 2-minute step-by-step walkthrough.
+
+---
+
 ## Testing
 ```bash
 ./vendor/bin/pest
