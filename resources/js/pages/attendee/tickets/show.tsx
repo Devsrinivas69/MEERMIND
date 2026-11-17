@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     Calendar,
     MapPin,
@@ -9,23 +10,34 @@ import {
     ShieldCheck,
     Sparkles,
     Building2,
-    Video
+    Video,
+    Star,
+    MessageSquare,
+    Send,
+    Loader2
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public-header';
 import { Button } from '@/components/ui/button';
-import type { Ticket } from '@/types';
+import type { Feedback, Ticket } from '@/types';
 
 type Props = {
     ticket: Ticket;
     qrSvg: string;
+    existingFeedback?: Feedback | null;
 };
 
-export default function TicketShow({ ticket, qrSvg }: Props) {
+export default function TicketShow({ ticket, qrSvg, existingFeedback }: Props) {
     const registration = ticket.registration;
     const event = registration?.event;
     const attendee = registration?.user;
     const isCheckedIn = ticket.status === 'used';
     const isCancelled = ticket.status === 'cancelled';
+
+    const [rating, setRating] = useState(existingFeedback?.rating || 5);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [reviewText, setReviewText] = useState(existingFeedback?.review_text || '');
+    const [submitting, setSubmitting] = useState(false);
+    const [feedbackDone, setFeedbackDone] = useState(!!existingFeedback);
 
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '';
@@ -219,6 +231,122 @@ export default function TicketShow({ ticket, qrSvg }: Props) {
                             <span>Cryptographically Signed HMAC-SHA256 Token</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Attendee Verified Feedback Form (print:hidden) */}
+                <div className="w-full mt-8 rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-xl print:hidden">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-400" />
+                            <h3 className="text-base font-bold text-foreground">Event Feedback & Review</h3>
+                        </div>
+                        <span className="text-xs text-muted-foreground">Verified Attendee Review</span>
+                    </div>
+
+                    {feedbackDone ? (
+                        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+                            <h4 className="text-sm font-bold text-foreground">Thank you for your feedback!</h4>
+                            <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                                Your ratings and review have been analyzed by MeetMind AI to help the organizer improve future sessions.
+                            </p>
+                            <div className="mt-3 flex items-center justify-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                        key={star}
+                                        className={`h-4 w-4 ${
+                                            star <= rating ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                            {reviewText && (
+                                <p className="mt-3 text-xs italic text-foreground/80 max-w-lg mx-auto">
+                                    "{reviewText}"
+                                </p>
+                            )}
+                        </div>
+                    ) : (
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                if (!reviewText.trim() || submitting) return;
+                                setSubmitting(true);
+                                router.post(`/events/${event.id}/feedback`, {
+                                    rating,
+                                    review_text: reviewText,
+                                }, {
+                                    preserveScroll: true,
+                                    onSuccess: () => setFeedbackDone(true),
+                                    onFinish: () => setSubmitting(false),
+                                });
+                            }}
+                            className="space-y-4"
+                        >
+                            <div>
+                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                    Your Rating
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setRating(star)}
+                                            onMouseEnter={() => setHoverRating(star)}
+                                            onMouseLeave={() => setHoverRating(0)}
+                                            className="p-1 rounded-lg hover:bg-muted/60 transition-colors focus:outline-none"
+                                        >
+                                            <Star
+                                                className={`h-7 w-7 transition-colors ${
+                                                    star <= (hoverRating || rating)
+                                                        ? 'text-amber-400 fill-amber-400'
+                                                        : 'text-muted-foreground/30'
+                                                }`}
+                                            />
+                                        </button>
+                                    ))}
+                                    <span className="text-xs font-medium text-muted-foreground ml-2">
+                                        {rating === 5 ? 'Exceptional' : rating === 4 ? 'Very Good' : rating === 3 ? 'Average' : 'Needs Improvement'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                    Your Honest Review
+                                </label>
+                                <textarea
+                                    value={reviewText}
+                                    onChange={(e) => setReviewText(e.target.value)}
+                                    placeholder="What did you think of the speakers, technical content, organization, or venue?"
+                                    rows={3}
+                                    required
+                                    minLength={5}
+                                    maxLength={2000}
+                                    className="w-full rounded-2xl border border-input bg-background/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 resize-none"
+                                />
+                            </div>
+
+                            <Button
+                                type="submit"
+                                disabled={submitting || reviewText.trim().length < 5}
+                                className="w-full bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Submitting Feedback...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="h-4 w-4 mr-2" />
+                                        Submit Verified Review
+                                    </>
+                                )}
+                            </Button>
+                        </form>
+                    )}
                 </div>
             </main>
         </div>

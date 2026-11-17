@@ -18,6 +18,7 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public-header';
+import { AiEventAssistant } from '@/components/ai-event-assistant';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Auth, Event, Ticket as TicketType } from '@/types';
@@ -322,6 +323,9 @@ export default function EventShow({ event, isRegistered, userTicket, relatedEven
                     </div>
                 </div>
             </main>
+
+            {/* AI Grounded Event Assistant */}
+            <AiEventAssistant event={event} />
         </div>
     );
 }

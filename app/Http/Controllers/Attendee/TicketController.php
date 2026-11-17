@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Attendee;
 
 use App\Http\Controllers\Controller;
+use App\Models\Feedback;
 use App\Models\Ticket;
 use App\Services\QrCodeService;
 use Illuminate\Http\Request;
@@ -47,9 +48,14 @@ class TicketController extends Controller
         // Generate SVG string for the QR token
         $qrSvg = $this->qrCodeService->generateSvg($ticket->qr_token, 240);
 
+        $existingFeedback = Feedback::where('event_id', $ticket->registration->event_id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
         return Inertia::render('attendee/tickets/show', [
             'ticket' => $ticket,
             'qrSvg' => $qrSvg,
+            'existingFeedback' => $existingFeedback,
         ]);
     }
 }
