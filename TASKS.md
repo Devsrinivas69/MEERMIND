@@ -37,18 +37,18 @@
 
 ---
 
-## Phase 4: Event Management & Public Discovery [IN PROGRESS]
-- [ ] Build Event CRUD controllers & Form Requests (`EventController`)
-- [ ] Slug generation & image upload handling for event covers
-- [ ] Public Event Discovery Controller & filters (search, category, date, availability)
-- [ ] React 19 Event Discovery UI (`pages/events/index.tsx`) with search, filter badges, and cards
-- [ ] React 19 Event Detail Page (`pages/events/show.tsx`) with venue, schedule, countdown, register CTA
-- [ ] React 19 Organizer Event Create/Edit Form (`pages/organizer/events/create.tsx`, `edit.tsx`)
-- [ ] Feature tests for event creation, validation, editing, and discovery
+## Phase 4: Event Management & Public Discovery [COMPLETED]
+- [x] Build Event CRUD controllers & Form Requests (`Organizer\EventController`, `StoreEventRequest`, `UpdateEventRequest`)
+- [x] Slug generation & image upload handling for event covers
+- [x] Public Event Discovery Controller & filters (search, category, type, timing)
+- [x] React 19 Event Discovery UI (`pages/events/index.tsx`) with search, filter badges, and cards
+- [x] React 19 Event Detail Page (`pages/events/show.tsx`) with venue, schedule, countdown, register CTA
+- [x] React 19 Organizer Event Create/Edit Form (`pages/organizer/events/create.tsx`, `edit.tsx`)
+- [x] Feature tests for event creation, validation, editing, and discovery (`tests/Feature/EventManagementTest.php`)
 
 ---
 
-## Phase 5: Attendee Registration System
+## Phase 5: Attendee Registration System [IN PROGRESS]
 - [ ] Registration Controller with DB Transactions to prevent overbooking
 - [ ] Unique registration constraint per user/event
 - [ ] Registration cancellation logic with capacity restoration
