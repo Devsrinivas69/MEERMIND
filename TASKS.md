@@ -48,26 +48,26 @@
 
 ---
 
-## Phase 5: Attendee Registration System [IN PROGRESS]
-- [ ] Registration Controller with DB Transactions to prevent overbooking
-- [ ] Unique registration constraint per user/event
-- [ ] Registration cancellation logic with capacity restoration
-- [ ] Attendee Dashboard (`pages/attendee/dashboard.tsx`) listing upcoming & past registrations
-- [ ] Feature tests for registration concurrency, capacity cap, and duplicate prevention
+## Phase 5: Attendee Registration System [COMPLETED]
+- [x] Registration Controller with DB Transactions to prevent overbooking (`RegistrationController`)
+- [x] Unique registration constraint per user/event
+- [x] Registration cancellation logic with capacity restoration
+- [x] Attendee Dashboard & Tickets List (`pages/attendee/tickets/index.tsx`)
+- [x] Feature tests for registration concurrency, capacity cap, and duplicate prevention
 
 ---
 
-## Phase 6: Digital Tickets & Secure QR Check-in
-- [ ] Secure HMAC-SHA256 QR Token Generator service
-- [ ] SVG/PNG QR Code generator
-- [ ] Attendee Ticket View (`pages/tickets/show.tsx`) with interactive pass card & download/print mode
-- [ ] Organizer QR Scanner Page (`pages/organizer/check-in.tsx`) with camera scanner (`html5-qrcode`) and manual fallback
-- [ ] Check-In validation API: verify signature, event match, duplicate check, record check-in
-- [ ] Feature tests for ticket generation, valid check-in, duplicate check-in rejection, and wrong-event rejection
+## Phase 6: Digital Tickets & Secure QR Check-in [COMPLETED]
+- [x] Secure HMAC-SHA256 QR Token Generator service (`QrCodeService`)
+- [x] Native SVG QR Code generation via BaconQrCode
+- [x] Attendee Ticket View (`pages/attendee/tickets/show.tsx`) with interactive pass card & print styling
+- [x] Organizer QR Scanner Page (`pages/organizer/events/check-in.tsx`) with camera scanner & manual fallback
+- [x] Check-In validation API: verify signature, event match, duplicate check, record check-in
+- [x] Feature tests for ticket generation, valid check-in, duplicate rejection (`tests/Feature/RegistrationAndCheckInTest.php`)
 
 ---
 
-## Phase 7: Organizer Analytics Dashboard
+## Phase 7: Organizer Analytics Dashboard [IN PROGRESS]
 - [ ] Analytics aggregation service (registrations, check-in rate, capacity utilization, timeline velocity)
 - [ ] Organizer Dashboard Page (`pages/organizer/dashboard.tsx`) with metric cards and visual trends
 - [ ] Real-time attendee roster table with search and check-in status badge
