@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Registration;
 use App\Models\Ticket;
-use App\Notifications\TicketIssuedNotification;
+use App\Notifications\RegistrationSubmittedNotification;
 use App\Services\QrCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,94 +18,90 @@ class RegistrationController extends Controller
     ) {}
 
     /**
-     * Register the authenticated attendee for the specified event.
+     * Submit an attendee registration application for the specified event.
      */
     public function store(Request $request, string $slug): RedirectResponse
     {
         $user = $request->user();
 
-        return DB::transaction(function () use ($user, $slug) {
-            // Lock event row for update to prevent race conditions during concurrent registrations
+        // Validate optional custom question responses & application notes
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'answers' => ['nullable', 'array'],
+            'answers.*' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return DB::transaction(function () use ($user, $slug, $validated) {
             $event = Event::where('slug', $slug)
                 ->published()
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            // Check if already registered
+            // 1. Check existing registration
             $existing = Registration::where('event_id', $event->id)
                 ->where('user_id', $user->id)
                 ->first();
 
             if ($existing) {
-                if ($existing->status === Registration::STATUS_CONFIRMED) {
-                    return back()->with('info', 'You are already registered for this event.');
+                if ($existing->isApproved()) {
+                    return back()->with('info', 'You are already registered and approved for this event.');
                 }
 
-                // If previously cancelled, re-activate
-                if (! $event->hasCapacity()) {
-                    return back()->with('error', 'Event is sold out. Cannot reinstate registration.');
+                if ($existing->isPending()) {
+                    return back()->with('info', 'Your registration application is already submitted and pending organizer approval.');
                 }
 
+                if ($existing->isWaitlisted()) {
+                    return back()->with('info', 'You are currently on the waitlist for this event.');
+                }
+
+                if ($existing->isRejected()) {
+                    return back()->with('error', 'Your previous application for this event was not approved.');
+                }
+
+                // If previously cancelled, re-apply as pending
                 $existing->update([
-                    'status' => Registration::STATUS_CONFIRMED,
+                    'status' => Registration::STATUS_PENDING,
+                    'application_submitted_at' => now(),
                     'cancelled_at' => null,
                     'cancellation_reason' => null,
+                    'notes' => $validated['notes'] ?? null,
+                    'answers' => $validated['answers'] ?? null,
                 ]);
 
-                if ($existing->ticket) {
-                    $existing->ticket->update(['status' => Ticket::STATUS_VALID]);
+                // Notify organizer
+                try {
+                    $event->organizer?->notify(new RegistrationSubmittedNotification($existing));
+                } catch (\Throwable $e) {
+                    report($e);
                 }
 
-                $event->increment('registered_count');
-
-                return redirect()->route('attendee.tickets.show', $existing->ticket->ticket_code)
-                    ->with('success', 'Your registration has been reinstated!');
+                return back()->with('success', 'Your registration request has been submitted. Waiting for organizer approval.');
             }
 
-            // Check capacity
-            if (! $event->hasCapacity()) {
-                return back()->with('error', 'Sorry, this event has reached maximum capacity.');
-            }
-
-            // Check deadline
+            // 2. Check registration deadline
             if ($event->registration_deadline && now()->greaterThan($event->registration_deadline)) {
                 return back()->with('error', 'The registration deadline for this event has passed.');
             }
 
-            // Create Registration
+            // 3. Create PENDING Registration (No ticket is generated until approved)
             $registration = Registration::create([
                 'event_id' => $event->id,
                 'user_id' => $user->id,
-                'status' => Registration::STATUS_CONFIRMED,
+                'status' => Registration::STATUS_PENDING,
+                'application_submitted_at' => now(),
+                'notes' => $validated['notes'] ?? null,
+                'answers' => $validated['answers'] ?? null,
             ]);
 
-            // Generate unique ticket code and signed QR token
-            $ticketCode = $this->qrCodeService->generateTicketCode();
-            while (Ticket::where('ticket_code', $ticketCode)->exists()) {
-                $ticketCode = $this->qrCodeService->generateTicketCode();
-            }
-
-            $qrToken = $this->qrCodeService->generateToken($registration->id, $event->id);
-
-            $ticket = Ticket::create([
-                'registration_id' => $registration->id,
-                'ticket_code' => $ticketCode,
-                'qr_token' => $qrToken,
-                'status' => Ticket::STATUS_VALID,
-            ]);
-
-            // Increment event counter
-            $event->increment('registered_count');
-
-            // Dispatch ticket confirmation email notification
+            // 4. Notify the relevant organizer
             try {
-                $user->notify(new TicketIssuedNotification($ticket));
+                $event->organizer?->notify(new RegistrationSubmittedNotification($registration));
             } catch (\Throwable $e) {
                 report($e);
             }
 
-            return redirect()->route('attendee.tickets.show', $ticket->ticket_code)
-                ->with('success', 'Registration confirmed! Here is your digital QR ticket.');
+            return back()->with('success', 'Your registration request has been submitted. Waiting for organizer approval.');
         });
     }
 
@@ -126,6 +122,8 @@ class RegistrationController extends Controller
         }
 
         DB::transaction(function () use ($registration, $request) {
+            $wasApproved = $registration->isApproved();
+
             $registration->update([
                 'status' => Registration::STATUS_CANCELLED,
                 'cancelled_at' => now(),
@@ -135,13 +133,17 @@ class RegistrationController extends Controller
             if ($registration->ticket) {
                 $registration->ticket->update([
                     'status' => Ticket::STATUS_CANCELLED,
+                    'revoked_at' => now(),
+                    'revocation_reason' => 'Registration cancelled by attendee',
                 ]);
             }
 
-            // Release spot
-            $registration->event()->decrement('registered_count');
+            // Release reserved capacity ONLY if this registration was approved
+            if ($wasApproved) {
+                $registration->event()->decrement('registered_count');
+            }
         });
 
-        return back()->with('success', 'Your registration has been cancelled.');
+        return back()->with('success', 'Your registration application has been cancelled.');
     }
 }

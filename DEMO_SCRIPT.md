@@ -35,21 +35,38 @@ All demo accounts come pre-seeded with encrypted test passwords (`password`):
 
 ---
 
-### Act 2: Attendee Registration & Instant Digital QR Ticket
-1. **Register for the Event:**
-   - On the event detail page, click **"Register for Event (Free)"**.
+### Act 2: Attendee Application with Custom Questions
+1. **Apply for the Event:**
+   - On the event detail page, click **"Apply to Attend"**.
    - (If not signed in, log in with `alex@example.com` / `password`).
-   - The transaction executes atomically with `lockForUpdate()`, guaranteeing no overbooking.
-2. **Inspect the Digital Ticket:**
-   - You are immediately redirected to your boarding pass: `http://127.0.0.1:8000/attendee/tickets/MM-...`
-   - Notice the high-resolution native SVG QR code, HMAC-SHA256 signature token, and pass status (*"Ready for Entrance Check-In"*).
-   - Click **"Print / Save PDF"** to view the clean, distraction-free print layout.
-3. **Simulated Email Confirmation:**
-   - A registration notification (`TicketIssuedNotification`) is written to `storage/logs/laravel.log` containing the pass code and links.
+   - The application dialog opens, collecting your background, motivation note, and custom questions defined by the organizer.
+   - Click **"Submit Application"**.
+   - The attendee sees: *"Your registration request has been submitted. Waiting for organizer approval."*
+   - Status badge is set to `PENDING`. No ticket is generated yet and no capacity is reserved.
+2. **Inspect Attendee Tickets & Requests:**
+   - Navigate to `/attendee/tickets` to see the status tabs: `All Requests`, `Approved Tickets`, `Pending Review`, and `Waitlist`.
+   - Alex's application is clearly badged as `PENDING REVIEW` with an informative explanation note.
 
 ---
 
-### Act 3: Organizer Live QR Scanner Terminal & Duplicate Prevention
+### Act 3: Organizer Review, AI Copilot & Concurrency-Safe Approval
+1. **Sign in as Event Organizer:**
+   - Sign in as `sarah@meetmind.ai` / `password`.
+   - Access the dedicated **"Review Applications"** management section at `/organizer/events/1/registrations` (accessible via sidebar or My Events).
+2. **Engage with the Live AI Organizer Copilot:**
+   - Click the **"AI Copilot"** button with the sparkle indicator.
+   - Click quick prompt chip: *"Summarize pending applicants"* or *"Capacity & seat status"*.
+   - Ask: *"Are there any senior engineers or founders among the applicants?"*
+   - Copilot analyzes live database records with zero hallucination and surfaces candidates with suggested actions (e.g., *"Approve Alex Rivera"*).
+   - Click **"Review & Run"** on the proposed action: A confirmation modal appears, ensuring human-in-the-loop verification before write execution.
+3. **Approve Application & Issue Cryptographic Ticket:**
+   - Click **"Approve"** on an application.
+   - An atomic database transaction locks capacity, increments `registered_count`, transitions status to `APPROVED`, issues an HMAC-SHA256 signed digital ticket, and dispatches an approval notification email.
+   - Bulk actions (Approve, Reject with reason, Waitlist) and CSV export are available.
+
+---
+
+### Act 4: Organizer Live QR Scanner Terminal & Duplicate Prevention
 1. **Sign in as Event Organizer:**
    - In another browser tab/window or after switching users, sign in as `sarah@meetmind.ai` / `password`.
 2. **Access the Live Check-In Terminal:**

@@ -15,6 +15,7 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { OrganizerCopilot } from '@/components/organizer-copilot';
 import type { BreadcrumbItem } from '@/types';
 
 type EventPerformance = {
@@ -106,6 +107,14 @@ export default function OrganizerDashboard({
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {eventPerformance && eventPerformance.length > 0 && (
+                            <OrganizerCopilot
+                                eventId={eventPerformance[0].id}
+                                eventTitle={eventPerformance[0].title}
+                                capacity={eventPerformance[0].capacity}
+                                registeredCount={eventPerformance[0].registrations_count}
+                            />
+                        )}
                         <Button asChild variant="outline" className="border-border/60">
                             <Link href="/organizer/events">
                                 Manage Events

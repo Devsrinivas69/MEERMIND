@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventCategory;
+use App\Models\Registration;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -75,20 +76,20 @@ class PublicEventController extends Controller
             ->with(['category', 'organizer'])
             ->firstOrFail();
 
-        // Check if current user is registered
-        $isRegistered = false;
+        // Check if current user has an application/registration
+        $userRegistration = null;
         $userTicket = null;
 
         if ($request->user()) {
-            $registration = $event->registrations()
+            $userRegistration = $event->registrations()
                 ->where('user_id', $request->user()->id)
-                ->where('status', 'confirmed')
+                ->where('status', '!=', Registration::STATUS_CANCELLED)
                 ->with('ticket')
+                ->latest()
                 ->first();
 
-            if ($registration) {
-                $isRegistered = true;
-                $userTicket = $registration->ticket;
+            if ($userRegistration && $userRegistration->isApproved()) {
+                $userTicket = $userRegistration->ticket;
             }
         }
 
@@ -103,7 +104,11 @@ class PublicEventController extends Controller
 
         return Inertia::render('events/show', [
             'event' => $event,
-            'isRegistered' => $isRegistered,
+            'userRegistration' => $userRegistration,
+            'isRegistered' => $userRegistration ? $userRegistration->isApproved() : false,
+            'isPending' => $userRegistration ? $userRegistration->isPending() : false,
+            'isWaitlisted' => $userRegistration ? $userRegistration->isWaitlisted() : false,
+            'isRejected' => $userRegistration ? $userRegistration->isRejected() : false,
             'userTicket' => $userTicket,
             'relatedEvents' => $relatedEvents,
         ]);

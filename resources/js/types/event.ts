@@ -35,6 +35,8 @@ export type Event = {
     registered_count: number;
     status: EventStatus;
     is_featured: boolean;
+    requires_approval?: boolean;
+    custom_questions?: Array<{ id: string; label: string; type: string; required?: boolean; options?: string[] }> | null;
     ai_summary: string | null;
     ai_faqs: Array<{ question: string; answer: string }> | null;
     organizer?: User;
@@ -43,7 +45,7 @@ export type Event = {
     updated_at: string;
 };
 
-export type RegistrationStatus = 'confirmed' | 'cancelled' | 'waitlisted';
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled' | 'confirmed';
 
 export type Registration = {
     id: number;
@@ -53,14 +55,22 @@ export type Registration = {
     cancelled_at: string | null;
     cancellation_reason: string | null;
     notes: string | null;
+    answers?: Record<string, string> | null;
+    application_submitted_at?: string | null;
+    reviewed_at?: string | null;
+    reviewed_by?: number | null;
+    rejection_reason?: string | null;
+    review_notes?: string | null;
+    approved_at?: string | null;
     event?: Event;
     user?: User;
+    reviewer?: User | null;
     ticket?: Ticket | null;
     created_at: string;
     updated_at: string;
 };
 
-export type TicketStatus = 'valid' | 'used' | 'cancelled';
+export type TicketStatus = 'valid' | 'used' | 'cancelled' | 'revoked' | 'expired';
 
 export type Ticket = {
     id: number;
@@ -69,6 +79,8 @@ export type Ticket = {
     qr_token: string;
     status: TicketStatus;
     checked_in_at: string | null;
+    revoked_at?: string | null;
+    revocation_reason?: string | null;
     registration?: Registration;
     check_in?: CheckIn | null;
     created_at: string;

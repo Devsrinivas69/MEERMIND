@@ -218,6 +218,13 @@ export default function OrganizerEventsIndex({ events }: Props) {
                                                             </Link>
                                                         </Button>
 
+                                                        {/* Registration & Application Review */}
+                                                        <Button asChild size="icon" variant="ghost" className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10" title="Review Attendee Applications">
+                                                            <Link href={`/organizer/events/${event.id}/registrations`}>
+                                                                <Users className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+
                                                         {/* Edit */}
                                                         <Button asChild size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Edit Event">
                                                             <Link href={`/organizer/events/${event.id}/edit`}>

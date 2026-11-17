@@ -50,7 +50,7 @@ class CheckInController extends Controller
     {
         $this->authorize('checkIn', $event);
 
-        $token = trim($request->input('token', ''));
+        $token = trim($request->input('token') ?? $request->input('qr_payload') ?? '');
         $code = trim($request->input('code', ''));
         $method = $request->input('method', CheckIn::METHOD_QR_SCAN);
 
@@ -92,12 +92,22 @@ class CheckInController extends Controller
             ], 422);
         }
 
-        // 3. Registration status check
-        if ($ticket->registration->status === 'cancelled') {
+        // 3. Registration approval status check
+        if (! $ticket->registration->isApproved()) {
             return response()->json([
                 'success' => false,
-                'status' => 'cancelled',
-                'message' => 'Registration Cancelled: This attendee has previously cancelled their registration.',
+                'status' => 'not_approved',
+                'message' => "Entrance Denied: Registration is {$ticket->registration->status}. Only approved attendees can check in.",
+                'attendee_name' => $ticket->registration->user->name ?? 'Unknown',
+            ], 422);
+        }
+
+        // 4. Ticket revocation or expiration check
+        if ($ticket->status === Ticket::STATUS_REVOKED || $ticket->status === Ticket::STATUS_EXPIRED || $ticket->status === Ticket::STATUS_CANCELLED) {
+            return response()->json([
+                'success' => false,
+                'status' => 'revoked',
+                'message' => "Ticket {$ticket->ticket_code} is revoked or cancelled. Entrance denied.",
                 'attendee_name' => $ticket->registration->user->name ?? 'Unknown',
             ], 422);
         }

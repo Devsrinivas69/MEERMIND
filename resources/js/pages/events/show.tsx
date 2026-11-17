@@ -15,25 +15,55 @@ import {
     Bot,
     ChevronDown,
     ChevronUp,
-    ShieldCheck
+    ShieldCheck,
+    Hourglass,
+    XCircle,
+    AlertCircle,
+    Send,
+    Loader2
 } from 'lucide-react';
 import { PublicHeader } from '@/components/public-header';
 import { AiEventAssistant } from '@/components/ai-event-assistant';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { Auth, Event, Ticket as TicketType } from '@/types';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import type { Auth, Event, Registration, Ticket as TicketType } from '@/types';
 
 type Props = {
     event: Event;
+    userRegistration?: Registration | null;
     isRegistered: boolean;
+    isPending?: boolean;
+    isWaitlisted?: boolean;
+    isRejected?: boolean;
     userTicket: TicketType | null;
     relatedEvents: Event[];
 };
 
-export default function EventShow({ event, isRegistered, userTicket, relatedEvents }: Props) {
+export default function EventShow({
+    event,
+    userRegistration,
+    isRegistered,
+    isPending = false,
+    isWaitlisted = false,
+    isRejected = false,
+    userTicket,
+    relatedEvents,
+}: Props) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const user = auth?.user;
-    const [registering, setRegistering] = useState(false);
+    const [openApplyModal, setOpenApplyModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+    const [applicationNotes, setApplicationNotes] = useState('');
+    const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
     const [openFaq, setOpenFaq] = useState<number | null>(null);
 
     const spotsLeft = Math.max(0, event.capacity - event.registered_count);
@@ -58,16 +88,35 @@ export default function EventShow({ event, isRegistered, userTicket, relatedEven
         });
     };
 
-    const handleRegister = () => {
+    const handleOpenApply = () => {
         if (!user) {
             router.get('/login');
             return;
         }
+        setOpenApplyModal(true);
+    };
 
-        setRegistering(true);
-        router.post(`/events/${event.slug}/register`, {}, {
+    const handleSubmitApplication = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        router.post(`/events/${event.slug}/register`, {
+            notes: applicationNotes,
+            answers: customAnswers,
+        }, {
             preserveScroll: true,
-            onFinish: () => setRegistering(false),
+            onSuccess: () => setOpenApplyModal(false),
+            onFinish: () => setSubmitting(false),
+        });
+    };
+
+    const handleCancelApplication = () => {
+        if (!userRegistration || cancelling) return;
+        if (!confirm('Are you sure you want to cancel your registration request?')) return;
+
+        setCancelling(true);
+        router.post(`/registrations/${userRegistration.id}/cancel`, {}, {
+            preserveScroll: true,
+            onFinish: () => setCancelling(false),
         });
     };
 
@@ -117,11 +166,9 @@ export default function EventShow({ event, isRegistered, userTicket, relatedEven
                             <span className="px-3 py-1 rounded-md text-xs font-medium bg-muted text-muted-foreground capitalize">
                                 {event.event_type}
                             </span>
-                            {event.is_featured && (
-                                <span className="px-3 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1">
-                                    <Sparkles className="h-3 w-3" /> Featured
-                                </span>
-                            )}
+                            <span className="px-3 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1">
+                                <Hourglass className="h-3 w-3" /> Requires Approval
+                            </span>
                         </div>
 
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground font-serif max-w-4xl leading-tight">
@@ -158,99 +205,87 @@ export default function EventShow({ event, isRegistered, userTicket, relatedEven
 
                 {/* Main Content Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                    {/* Left: Event Details & Agenda */}
+                    {/* Left 2 Columns: Description & Details */}
                     <div className="lg:col-span-2 space-y-10">
-                        {/* Description */}
-                        <section className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8">
+                        {/* About section */}
+                        <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-sm">
                             <h2 className="text-xl font-bold text-foreground mb-4">About This Event</h2>
                             <div className="prose prose-invert max-w-none text-muted-foreground leading-relaxed whitespace-pre-line text-sm sm:text-base">
                                 {event.description}
                             </div>
-                        </section>
+                        </div>
 
-                        {/* FAQs */}
+                        {/* FAQs Section */}
                         {event.ai_faqs && event.ai_faqs.length > 0 && (
-                            <section className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8">
+                            <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8 shadow-sm">
                                 <div className="flex items-center gap-2 mb-6">
-                                    <Bot className="h-5 w-5 text-amber-400" />
+                                    <Sparkles className="h-5 w-5 text-amber-400" />
                                     <h2 className="text-xl font-bold text-foreground">Frequently Asked Questions</h2>
                                 </div>
                                 <div className="space-y-3">
                                     {event.ai_faqs.map((faq, idx) => (
                                         <div
                                             key={idx}
-                                            className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden transition-colors"
+                                            className="rounded-2xl border border-border/40 bg-background/50 overflow-hidden"
                                         >
                                             <button
                                                 type="button"
                                                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                                                className="w-full text-left px-5 py-4 flex items-center justify-between gap-4 font-medium text-sm text-foreground hover:text-amber-400"
+                                                className="w-full p-4 text-left flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors"
                                             >
-                                                <span>{faq.question}</span>
+                                                <span className="font-semibold text-sm text-foreground">{faq.question}</span>
                                                 {openFaq === idx ? (
-                                                    <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                    <ChevronUp className="h-4 w-4 text-amber-400 shrink-0" />
                                                 ) : (
-                                                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                                                 )}
                                             </button>
                                             {openFaq === idx && (
-                                                <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border/20 pt-3">
+                                                <div className="px-4 pb-4 pt-1 text-sm text-muted-foreground border-t border-border/20">
                                                     {faq.answer}
                                                 </div>
                                             )}
                                         </div>
                                     ))}
                                 </div>
-                            </section>
+                            </div>
                         )}
                     </div>
 
-                    {/* Right: Registration Card */}
+                    {/* Right Column: Registration Card & Sidebar */}
                     <div className="space-y-6">
-                        <div className="sticky top-20 rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-xl">
-                            {/* Registration Status Banner */}
-                            {isRegistered ? (
-                                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 mb-6">
-                                    <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-                                        <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                        <span>You are confirmed for this event!</span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-emerald-400/80">
-                                        Your unique digital ticket with QR code is ready.
-                                    </p>
-                                    {userTicket && (
-                                        <Button asChild size="sm" className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
-                                            <Link href={`/attendee/tickets/${userTicket.ticket_code}`}>
-                                                <Ticket className="h-4 w-4 mr-2" />
-                                                View Digital QR Ticket
-                                            </Link>
-                                        </Button>
-                                    )}
+                        <div className="rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-xl sticky top-24">
+                            <div className="flex items-center justify-between pb-4 border-b border-border/40">
+                                <div>
+                                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Admission</div>
+                                    <div className="text-2xl font-extrabold text-foreground">Free Registration</div>
                                 </div>
-                            ) : null}
+                                <Badge variant="outline" className="text-xs border-amber-500/40 bg-amber-500/10 text-amber-400">
+                                    Application Review
+                                </Badge>
+                            </div>
 
-                            {/* Capacity Meter */}
-                            <div className="mb-6">
-                                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-2">
-                                    <span>Registration Capacity</span>
-                                    <span className="font-mono text-foreground font-semibold">
-                                        {event.registered_count} / {event.capacity} Filled
+                            {/* Capacity meter */}
+                            <div className="mt-5 space-y-2">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Approved Attendees</span>
+                                    <span className="font-semibold text-foreground">
+                                        {event.registered_count} / {event.capacity} seats reserved
                                     </span>
                                 </div>
-                                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                                     <div
-                                        className="h-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-500"
+                                        className="bg-amber-500 h-2 rounded-full transition-all"
                                         style={{ width: `${fillPercentage}%` }}
                                     />
                                 </div>
-                                <div className="mt-2 flex items-center justify-between text-xs">
-                                    <span className="text-amber-400 font-medium">{spotsLeft} spots remaining</span>
-                                    <span className="text-muted-foreground">{100 - fillPercentage}% available</span>
+                                <div className="text-[11px] text-muted-foreground text-right">
+                                    {spotsLeft > 0 ? `${spotsLeft} seats remaining` : 'Capacity reached'}
                                 </div>
                             </div>
 
-                            {/* Date & Time details */}
-                            <div className="space-y-4 py-4 border-y border-border/40 text-sm">
+                            {/* Schedule & Location */}
+                            <div className="mt-6 space-y-4 pt-6 border-t border-border/40 text-sm">
                                 <div className="flex items-start gap-3">
                                     <Calendar className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                                     <div>
@@ -266,9 +301,9 @@ export default function EventShow({ event, isRegistered, userTicket, relatedEven
                                         <>
                                             <Video className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                                             <div>
-                                                <div className="font-semibold text-foreground">Online Stream</div>
+                                                <div className="font-semibold text-foreground">Virtual Live Stream</div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    Link sent to registered attendees
+                                                    Link sent to approved attendees
                                                 </div>
                                             </div>
                                         </>
@@ -286,43 +321,208 @@ export default function EventShow({ event, isRegistered, userTicket, relatedEven
                                 </div>
                             </div>
 
-                            {/* Registration Button */}
-                            <div className="mt-6">
-                                {isRegistered ? (
-                                    <Button asChild variant="outline" className="w-full border-border/60">
-                                        <Link href="/attendee/tickets">
-                                            Manage All My Registrations
-                                        </Link>
-                                    </Button>
+                            {/* Dynamic Registration & Approval Status Area */}
+                            <div className="mt-6 pt-6 border-t border-border/40">
+                                {isRegistered && userTicket ? (
+                                    /* 1. APPROVED STATUS */
+                                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                                            <CheckCircle2 className="h-5 w-5" />
+                                            <span>Registration Approved!</span>
+                                        </div>
+                                        <p className="text-xs text-foreground/80">
+                                            Congratulations! Your application has been approved by the organizer. Your unique digital QR boarding pass is ready.
+                                        </p>
+                                        <Button asChild className="w-full bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-bold">
+                                            <Link href={`/attendee/tickets/${userTicket.ticket_code}`}>
+                                                <Ticket className="h-4 w-4 mr-2" />
+                                                View Digital QR Boarding Pass
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                ) : isPending ? (
+                                    /* 2. PENDING STATUS */
+                                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                                            <Hourglass className="h-5 w-5 animate-pulse" />
+                                            <span>Application Pending Review</span>
+                                        </div>
+                                        <p className="text-xs text-foreground/80 leading-relaxed">
+                                            Your registration request has been submitted. Waiting for organizer approval. You will receive an email once reviewed.
+                                        </p>
+                                        <Button
+                                            onClick={handleCancelApplication}
+                                            disabled={cancelling}
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full border-border/60 text-xs text-muted-foreground hover:text-rose-400"
+                                        >
+                                            {cancelling ? 'Cancelling...' : 'Cancel Application'}
+                                        </Button>
+                                    </div>
+                                ) : isWaitlisted ? (
+                                    /* 3. WAITLISTED STATUS */
+                                    <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
+                                            <Users className="h-5 w-5" />
+                                            <span>Placed on Event Waitlist</span>
+                                        </div>
+                                        <p className="text-xs text-foreground/80 leading-relaxed">
+                                            You are currently on the waitlist. If spots become available, waitlisted applicants are promoted in sequence.
+                                        </p>
+                                    </div>
+                                ) : isRejected ? (
+                                    /* 4. REJECTED STATUS */
+                                    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                                            <XCircle className="h-5 w-5" />
+                                            <span>Application Not Approved</span>
+                                        </div>
+                                        <p className="text-xs text-foreground/80 leading-relaxed">
+                                            Your application was not approved for this session due to limited capacity or criteria matching.
+                                        </p>
+                                        {userRegistration?.rejection_reason && (
+                                            <div className="text-xs italic text-rose-300/90 bg-rose-950/30 p-2 rounded-lg border border-rose-500/20">
+                                                "{userRegistration.rejection_reason}"
+                                            </div>
+                                        )}
+                                    </div>
                                 ) : isSoldOut ? (
-                                    <Button disabled className="w-full bg-muted text-muted-foreground cursor-not-allowed">
-                                        Event Sold Out
-                                    </Button>
+                                    /* 5. SOLD OUT / WAITLIST APPLY */
+                                    <div className="space-y-3">
+                                        <Button
+                                            onClick={handleOpenApply}
+                                            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                                        >
+                                            Apply for Waitlist
+                                        </Button>
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            Event is at capacity. Submit an application to join the priority waitlist.
+                                        </p>
+                                    </div>
                                 ) : user ? (
-                                    <Button
-                                        onClick={handleRegister}
-                                        disabled={registering}
-                                        className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold text-base shadow-lg shadow-amber-500/20"
-                                    >
-                                        {registering ? 'Registering...' : 'Register for Event (Free)'}
-                                    </Button>
+                                    /* 6. READY TO APPLY */
+                                    <div className="space-y-3">
+                                        <Button
+                                            onClick={handleOpenApply}
+                                            className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold text-base shadow-lg shadow-amber-500/20"
+                                        >
+                                            Apply to Attend (Requires Approval)
+                                        </Button>
+                                        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground text-center">
+                                            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                                            <span>Organizer approval required before ticket issuance</span>
+                                        </div>
+                                    </div>
                                 ) : (
+                                    /* 7. GUEST USER */
                                     <Button asChild className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold text-base shadow-lg shadow-amber-500/20">
                                         <Link href="/login">
-                                            Sign in to Register
+                                            Sign in to Apply
                                         </Link>
                                     </Button>
                                 )}
-                            </div>
-
-                            <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground text-center">
-                                <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                                <span>Instant digital ticket with secure QR check-in</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
+
+            {/* Application Submission Dialog */}
+            <Dialog open={openApplyModal} onOpenChange={setOpenApplyModal}>
+                <DialogContent className="sm:max-w-xl bg-card border-border/80">
+                    <DialogHeader>
+                        <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Attendee Application
+                        </div>
+                        <DialogTitle className="text-xl font-bold text-foreground">
+                            Apply for {event.title}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">
+                            This event curates attendee attendance to maintain high signal. Please complete the application details below for organizer review.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmitApplication} className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-3 text-xs bg-muted/40 p-3 rounded-xl border border-border/40">
+                            <div>
+                                <span className="text-muted-foreground">Applicant Name:</span>
+                                <div className="font-semibold text-foreground">{user?.name}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Email:</span>
+                                <div className="font-semibold text-foreground">{user?.email}</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                                Motivation / Why do you wish to attend?
+                            </label>
+                            <textarea
+                                value={applicationNotes}
+                                onChange={(e) => setApplicationNotes(e.target.value)}
+                                placeholder="Describe your relevant background, technical interests, or what you hope to contribute/learn..."
+                                rows={3}
+                                className="w-full rounded-xl border border-input bg-background/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 resize-none"
+                            />
+                        </div>
+
+                        {/* Custom Questions Defined by Organizer */}
+                        {event.custom_questions && event.custom_questions.map((q) => (
+                            <div key={q.id}>
+                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                                    {q.label} {q.required && <span className="text-amber-400">*</span>}
+                                </label>
+                                <input
+                                    type={q.type || 'text'}
+                                    required={q.required}
+                                    value={customAnswers[q.id] || ''}
+                                    onChange={(e) => setCustomAnswers({ ...customAnswers, [q.id]: e.target.value })}
+                                    placeholder="Your answer..."
+                                    className="w-full rounded-xl border border-input bg-background/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+                                />
+                            </div>
+                        ))}
+
+                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-muted-foreground flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                            <span>
+                                Submitting creates a **PENDING** request. Tickets are generated only upon approval by the organizer committee.
+                            </span>
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setOpenApplyModal(false)}
+                                className="border-border/60"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={submitting}
+                                className="bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Submitting Request...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="h-4 w-4 mr-2" />
+                                        Submit Registration Application
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* AI Grounded Event Assistant */}
             <AiEventAssistant event={event} />

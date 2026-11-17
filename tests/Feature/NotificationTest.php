@@ -5,13 +5,13 @@ use App\Models\Registration;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\CheckInConfirmedNotification;
-use App\Notifications\TicketIssuedNotification;
+use App\Notifications\RegistrationSubmittedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 
 uses(RefreshDatabase::class);
 
-test('ticket issued notification is sent to attendee upon successful registration', function () {
+test('registration submitted notification is sent to organizer upon attendee application', function () {
     Notification::fake();
 
     $organizer = User::factory()->create(['role' => User::ROLE_ORGANIZER]);
@@ -31,14 +31,10 @@ test('ticket issued notification is sent to attendee upon successful registratio
     $response->assertRedirect();
 
     Notification::assertSentTo(
-        $attendee,
-        TicketIssuedNotification::class,
+        $organizer,
+        RegistrationSubmittedNotification::class,
         function ($notification) use ($event) {
-            $mail = $notification->toMail(User::factory()->make());
-            expect($mail->subject)->toContain('Your Ticket for Autonomous Agents Summit')
-                ->and($mail->introLines[0])->toContain('Autonomous Agents Summit');
-
-            return $notification->ticket->registration->event_id === $event->id;
+            return $notification->registration->event_id === $event->id;
         }
     );
 });

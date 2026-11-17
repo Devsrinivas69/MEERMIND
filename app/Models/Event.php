@@ -58,6 +58,8 @@ use Illuminate\Support\Carbon;
     'capacity',
     'registered_count',
     'status',
+    'requires_approval',
+    'custom_questions',
     'is_featured',
     'ai_summary',
     'ai_faqs',
@@ -94,6 +96,8 @@ class Event extends Model
             'capacity' => 'integer',
             'registered_count' => 'integer',
             'is_featured' => 'boolean',
+            'requires_approval' => 'boolean',
+            'custom_questions' => 'array',
             'ai_faqs' => 'array',
         ];
     }
@@ -184,6 +188,36 @@ class Event extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(Registration::class);
+    }
+
+    /**
+     * Pending applications awaiting organizer review.
+     *
+     * @return HasMany<Registration, $this>
+     */
+    public function pendingRegistrations(): HasMany
+    {
+        return $this->hasMany(Registration::class)->where('status', Registration::STATUS_PENDING);
+    }
+
+    /**
+     * Approved registrations occupying seats.
+     *
+     * @return HasMany<Registration, $this>
+     */
+    public function approvedRegistrations(): HasMany
+    {
+        return $this->hasMany(Registration::class)->whereIn('status', [Registration::STATUS_APPROVED, 'confirmed']);
+    }
+
+    /**
+     * Waitlisted registrations.
+     *
+     * @return HasMany<Registration, $this>
+     */
+    public function waitlistedRegistrations(): HasMany
+    {
+        return $this->hasMany(Registration::class)->where('status', Registration::STATUS_WAITLISTED);
     }
 
     /**

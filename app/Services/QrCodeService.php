@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Registration;
 use App\Models\Ticket;
 use BaconQrCode\Renderer\Color\Rgb;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -59,5 +60,35 @@ class QrCodeService
         $random = strtoupper(Str::random(6));
 
         return "MM-{$year}-{$random}";
+    }
+
+    /**
+     * Issue and persist a cryptographically signed ticket for an approved registration.
+     */
+    public function issueTicketForRegistration(Registration $registration): Ticket
+    {
+        if ($registration->ticket) {
+            $registration->ticket->update([
+                'status' => Ticket::STATUS_VALID,
+                'revoked_at' => null,
+                'revocation_reason' => null,
+            ]);
+
+            return $registration->ticket;
+        }
+
+        $ticketCode = $this->generateTicketCode();
+        while (Ticket::where('ticket_code', $ticketCode)->exists()) {
+            $ticketCode = $this->generateTicketCode();
+        }
+
+        $qrToken = $this->generateToken($registration->id, $registration->event_id);
+
+        return Ticket::create([
+            'registration_id' => $registration->id,
+            'ticket_code' => $ticketCode,
+            'qr_token' => $qrToken,
+            'status' => Ticket::STATUS_VALID,
+        ]);
     }
 }

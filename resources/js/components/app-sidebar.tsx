@@ -7,7 +7,8 @@ import {
     QrCode,
     Ticket,
     Sparkles,
-    BarChart3
+    BarChart3,
+    UserCheck,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -56,6 +57,11 @@ export function AppSidebar() {
                 title: 'My Events',
                 href: '/organizer/events',
                 icon: Calendar,
+            },
+            {
+                title: 'Review Applications',
+                href: '/organizer/registrations',
+                icon: UserCheck,
             },
             {
                 title: 'Create Event',

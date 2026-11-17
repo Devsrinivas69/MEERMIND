@@ -22,7 +22,7 @@ test('guest is redirected to login when trying to register', function () {
     $response->assertRedirect(route('login'));
 });
 
-test('attendee can register for an event and receives a digital ticket', function () {
+test('attendee can apply for an event and application requires organizer approval', function () {
     $event = Event::published()->first();
     $newUser = User::factory()->create(['role' => User::ROLE_ATTENDEE]);
     $initialCount = $event->registered_count;
@@ -35,14 +35,14 @@ test('attendee can register for an event and receives a digital ticket', functio
         ->first();
 
     expect($registration)->not->toBeNull()
-        ->and($registration->status)->toBe(Registration::STATUS_CONFIRMED)
-        ->and($registration->ticket)->not->toBeNull()
-        ->and($event->fresh()->registered_count)->toBe($initialCount + 1);
+        ->and($registration->status)->toBe(Registration::STATUS_PENDING)
+        ->and($registration->ticket)->toBeNull()
+        ->and($event->fresh()->registered_count)->toBe($initialCount);
 
-    $response->assertRedirect(route('attendee.tickets.show', $registration->ticket->ticket_code));
+    $response->assertRedirect();
 });
 
-test('duplicate registration attempt does not create multiple tickets', function () {
+test('duplicate registration attempt does not create multiple applications', function () {
     $event = Event::published()->first();
     $existingReg = Registration::where('event_id', $event->id)->first();
     $attendee = $existingReg->user;
@@ -57,27 +57,30 @@ test('duplicate registration attempt does not create multiple tickets', function
         ->and($event->fresh()->registered_count)->toBe($initialCount);
 });
 
-test('cannot register when event capacity is reached', function () {
+test('cannot approve registration when event capacity is reached', function () {
     $event = Event::published()->first();
     $event->update([
         'capacity' => 10,
         'registered_count' => 10,
     ]);
 
-    $newUser = User::factory()->create(['role' => User::ROLE_ATTENDEE]);
+    $pendingReg = Registration::factory()->create([
+        'event_id' => $event->id,
+        'status' => Registration::STATUS_PENDING,
+    ]);
 
-    $response = $this->actingAs($newUser)
-        ->from(route('events.show', $event->slug))
-        ->post(route('events.register', $event->slug));
+    $response = $this->actingAs($event->organizer)
+        ->post(route('organizer.registrations.approve', $pendingReg->id));
 
-    $response->assertRedirect(route('events.show', $event->slug));
-    expect(Registration::where('event_id', $event->id)->where('user_id', $newUser->id)->exists())->toBeFalse();
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($pendingReg->fresh()->status)->toBe(Registration::STATUS_PENDING);
 });
 
 test('attendee can cancel registration and capacity is released', function () {
     $event = Event::published()->first();
     $registration = Registration::where('event_id', $event->id)
-        ->where('status', Registration::STATUS_CONFIRMED)
+        ->where('status', Registration::STATUS_APPROVED)
         ->first();
     $attendee = $registration->user;
     $initialCount = $event->registered_count;

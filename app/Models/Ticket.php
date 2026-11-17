@@ -25,6 +25,8 @@ use Illuminate\Support\Carbon;
     'qr_token',
     'status',
     'checked_in_at',
+    'revoked_at',
+    'revocation_reason',
 ])]
 class Ticket extends Model
 {
@@ -36,6 +38,10 @@ class Ticket extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const STATUS_REVOKED = 'revoked';
+
+    public const STATUS_EXPIRED = 'expired';
+
     /**
      * Get the attributes that should be cast.
      *
@@ -45,6 +51,7 @@ class Ticket extends Model
     {
         return [
             'checked_in_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 
@@ -54,6 +61,30 @@ class Ticket extends Model
     public function canCheckIn(): bool
     {
         return $this->status === self::STATUS_VALID && $this->checked_in_at === null;
+    }
+
+    /**
+     * Check if the ticket has already been used.
+     */
+    public function isUsed(): bool
+    {
+        return $this->status === self::STATUS_USED || $this->checked_in_at !== null;
+    }
+
+    /**
+     * Check if the ticket is valid.
+     */
+    public function isValid(): bool
+    {
+        return $this->status === self::STATUS_VALID && $this->checked_in_at === null;
+    }
+
+    /**
+     * Check if the ticket is revoked.
+     */
+    public function isRevoked(): bool
+    {
+        return $this->status === self::STATUS_REVOKED;
     }
 
     /**
