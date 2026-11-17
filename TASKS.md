@@ -28,16 +28,16 @@
 
 ---
 
-## Phase 3: Authentication, User Profiles & Role Authorization [IN PROGRESS]
-- [ ] Update `User` model with roles (`isOrganizer()`, `isAttendee()`, `isAdmin()`)
-- [ ] Update registration flow to allow selecting / defaulting roles
-- [ ] Create Role Middleware & Authorization Policies (`EventPolicy`, `TicketPolicy`)
-- [ ] Update Navigation & Layout to adapt based on authenticated user role
-- [ ] Write Pest feature tests for role-based authorization
+## Phase 3: Authentication, User Profiles & Role Authorization [COMPLETED]
+- [x] Update `User` model with roles (`isOrganizer()`, `isAttendee()`, `isAdmin()`)
+- [x] Update registration flow in `CreateNewUser` to validate and persist roles
+- [x] Create Role Middleware `EnsureUserHasRole` & Authorization Policies (`EventPolicy`, `TicketPolicy`)
+- [x] Define TypeScript interfaces for User, Event, Ticket, CheckIn, Feedback, and Insights
+- [x] Write Pest feature tests for role-based authorization (`tests/Feature/RoleAuthorizationTest.php`)
 
 ---
 
-## Phase 4: Event Management & Public Discovery
+## Phase 4: Event Management & Public Discovery [IN PROGRESS]
 - [ ] Build Event CRUD controllers & Form Requests (`EventController`)
 - [ ] Slug generation & image upload handling for event covers
 - [ ] Public Event Discovery Controller & filters (search, category, date, availability)
